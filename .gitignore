@@ -12,3 +12,6 @@ signature*.xml
 Thumbs.db
 .vscode/
 .idea/
+
+# Local build output
+dist/

@@ -55,21 +55,15 @@ Mesures faites sur une Samsung TU70DU7105 (2024, Tizen 9.0, CPU ARM 4 cœurs, 1,
 
 ## Installation sur la TV
 
-Il faut un ordinateur avec **Tizen Studio** (CLI) et un **compte Samsung**. Une application non publiée doit être signée avec un certificat Samsung lié à *votre* TV : aucun paquet `.wgt` signé ne peut être fourni pour toutes les TV.
+Il faut un ordinateur avec **Tizen Studio** (CLI) et un **compte Samsung**. Une application non publiée doit être signée avec un certificat Samsung lié à **votre** TV : aucun paquet `.wgt` signé valable pour toutes les TV ne peut être fourni.
 
-1. Installez Tizen Studio avec les extensions **Samsung TV** et **Samsung Certificate**.
-2. Sur la TV, ouvrez **Apps**, tapez **1 2 3 4 5** et activez le **mode développeur** en indiquant l'adresse IP de l'ordinateur. Redémarrez la TV.
-3. Connectez la TV : `sdb connect <IP-de-la-TV>`
-4. Dans **Certificate Manager**, créez un profil **Samsung → TV** (connexion au compte Samsung). Le DUID de la TV connectée est ajouté automatiquement.
-5. Construisez, signez et installez :
+En résumé : activez le mode développeur sur la TV (**Apps → 1 2 3 4 5**), créez un profil de certificat **Samsung → TV** dans Certificate Manager, puis :
 
 ```bash
-tizen package -t wgt -s <votre-profil> -- .
-tizen install -n "MilkyWan TV.wgt" -t <nom-de-la-TV>
-tizen run -p MilkywanTV.Main -t <nom-de-la-TV>
+TV_IP=<IP-de-la-TV> ./build.sh install
 ```
 
-Les fichiers `README.md`, `CHANGELOG.md`, `docs/`, `serve-pc.py` et `Lancer-PC.*` ne servent pas sur la TV. Vous pouvez les exclure du paquet.
+**Le guide complet est dans [BUILD.md](BUILD.md)** : prérequis, certificats author et distributor, sauvegarde, mises à jour, erreurs fréquentes et débogage sur la TV.
 
 ## Version PC
 
