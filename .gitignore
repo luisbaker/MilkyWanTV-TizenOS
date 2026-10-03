@@ -1,0 +1,14 @@
+# Built and signed packages are specific to one TV (Samsung certificate + DUID)
+*.wgt
+author-signature.xml
+signature*.xml
+*.p12
+*.pwd
+.sign/
+.buildResult/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
