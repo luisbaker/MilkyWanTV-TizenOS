@@ -2,24 +2,63 @@
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MilkyWan TV</title><link rel="icon" type="image/png" href="icon.png"><link rel="stylesheet" href="style.css"><script>if(typeof tizen!=="undefined"){document.write('<script src="$WEBAPIS/webapis/webapis.js"><\/script>');}</script></head>
 <body>
 <object id="av-player" type="application/avplayer"></object><video id="web-video" playsinline preload="none"></video><div id="app">
-<div id="idle"><div><img class="app-brand-logo" src="icon.png" alt="Logo MilkyWan TV" width="200" height="200"><span class="idle-brand">MilkyWan TV</span><p>Choisissez une chaîne pour lancer le direct.</p></div></div>
+<div id="backdrop"></div>
 <button id="video-hit" aria-label="Afficher les informations du programme"></button>
-<main id="home"><div class="sidebar"><div id="channels" aria-label="Chaînes"></div><footer>↑ ↓ Chaînes · OK Regarder · ← → Infos, pistes et options</footer></div></main>
-<section id="banner" hidden aria-label="Programme et pistes">
+
+<main id="home">
+  <div class="sidebar"><div id="channels" aria-label="Chaînes"></div><footer>↑ ↓ Chaînes · OK Regarder · ← → Commandes</footer></div>
+  <section class="preview" aria-label="Aperçu">
+    <div id="preview-frame"><div id="preview-idle"><img src="icon.png" alt="" width="150" height="150"><strong>MilkyWan TV</strong><p>Choisissez une chaîne pour lancer le direct.</p><small>Application non officielle</small></div></div>
+    <div class="preview-info">
+      <div class="preview-head"><div id="preview-logo" class="logo"></div><h2 id="preview-title"></h2><span id="clock"></span></div>
+      <div id="preview-timeline"></div>
+      <div class="preview-body"><p id="preview-desc"></p><ol id="preview-next"></ol></div>
+    </div>
+  </section>
+</main>
+
+<section id="banner" hidden aria-label="Programme et commandes">
   <div class="banner-heading"><div id="banner-logo" class="logo"></div><div class="banner-title"><p id="banner-channel"></p><h1 id="banner-program">MilkyWan TV</h1></div><span id="paused" hidden>En pause</span></div>
-  <div id="banner-timeline"></div><p id="banner-next"></p>
-  <nav id="banner-tabs" role="tablist" aria-label="Informations et pistes"><button id="infos" role="tab" aria-controls="info-panel" aria-selected="true" class="active">Infos</button><button id="audio" role="tab" aria-controls="audio-panel" aria-selected="false">Audio</button><button id="subtitles" role="tab" aria-controls="subtitles-panel" aria-selected="false">Sous-titres</button><button id="nerds-tab" role="tab" aria-controls="nerds-tab-panel" aria-selected="false">Nerds</button><button id="options-tab" role="tab" aria-controls="options-tab-panel" aria-selected="false">Options</button></nav>
+  <div id="banner-timeline"></div>
   <div id="info-panel" role="tabpanel" aria-labelledby="infos"><p id="detail"></p></div>
+  <p id="banner-next"></p>
+  <nav id="banner-tabs" role="tablist" aria-label="Commandes">
+    <button id="infos" role="tab" aria-controls="info-panel" aria-selected="true" class="active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.5"/></svg><span>Infos</span></button>
+    <button id="audio" role="tab" aria-controls="audio-panel" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" class="fill"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg><span id="audio-label">Audio</span></button>
+    <button id="subtitles" role="tab" aria-controls="subtitles-panel" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="3"/><path d="M7 11h4M13 11h4M7 14.5h7"/></svg><span>Sous-titres</span></button>
+    <button id="nerds-tab" role="tab" aria-controls="nerds-tab-panel" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M2.5 12h4l2.5-6 4 12 2.5-6h6"/></svg><span>Stats</span></button>
+    <button id="options-tab" role="tab" aria-controls="options-tab-panel" aria-selected="false" aria-label="Options"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.9 1.9M16.6 16.6l1.9 1.9M5.5 18.5l1.9-1.9M16.6 7.4l1.9-1.9"/></svg></button>
+  </nav>
   <div id="audio-panel" hidden role="tabpanel" aria-labelledby="audio"><p id="audio-message" role="status"></p><div id="audio-tracks" class="track-buttons"></div></div>
   <div id="subtitles-panel" hidden role="tabpanel" aria-labelledby="subtitles"><p id="subtitles-message" role="status"></p><div id="subtitle-tracks" class="track-buttons"></div></div>
-  <div id="nerds-tab-panel" hidden role="tabpanel" aria-labelledby="nerds-tab"><dl id="banner-nerds"></dl><p class="nerds-hint">OK : statistiques détaillées en direct · Retour : fermer</p></div>
-  <div id="options-tab-panel" hidden role="tabpanel" aria-labelledby="options-tab"><p class="nerds-hint">OK : favoris, groupes, recherche, actualiser, paramètres, quitter</p></div>
+  <div id="nerds-tab-panel" hidden role="tabpanel" aria-labelledby="nerds-tab"></div>
+  <div id="options-tab-panel" hidden role="tabpanel" aria-labelledby="options-tab"></div>
 </section>
+
 <p id="status" hidden role="status"></p><p id="play-status" hidden role="status"></p><p id="subtitle-text" hidden></p>
-<section id="options-modal" hidden role="dialog" aria-modal="true" aria-labelledby="options-title"><div class="dialog"><h2 id="options-title">MilkyWan TV</h2><nav class="actions"><button id="fav-toggle">★ Ajouter aux favoris</button><button id="all" class="active">Toutes les chaînes</button><button id="favorites">★ Favoris</button><button id="group">Groupe : tous</button></nav><input id="search" placeholder="Rechercher une chaîne" aria-label="Rechercher une chaîne"><div class="actions"><button id="reload">Actualiser</button><button id="settings">Paramètres</button><button id="nerds">Informations pour nerds</button><button id="exit">Quitter</button><button id="close-options">Fermer</button></div></div></section>
+
+<section id="options-modal" hidden role="dialog" aria-modal="true" aria-labelledby="options-title"><div class="dialog"><h2 id="options-title">Options</h2><nav class="actions"><button id="fav-toggle">★ Ajouter aux favoris</button><button id="all" class="active">Toutes les chaînes</button><button id="favorites">★ Favoris</button><button id="group">Groupe : tous</button></nav><input id="search" placeholder="Rechercher une chaîne" aria-label="Rechercher une chaîne"><div class="actions"><button id="reload">Actualiser</button><button id="settings">Paramètres</button><button id="nerds">Statistiques</button><button id="exit">Quitter</button><button id="close-options">Fermer</button></div><p class="dialog-note">MilkyWan TV · application non officielle</p></div></section>
 <section id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="dialog"><h2 id="modal-title">Paramètres</h2><p>Les adresses MilkyWan sont déjà configurées.</p><label for="m3u">URL de la liste M3U</label><input id="m3u" type="url"><label for="epg">URL du guide XMLTV</label><input id="epg" type="url"><p id="settings-error" role="alert"></p><div class="actions"><button id="save">Enregistrer</button><button id="cancel">Annuler</button></div></div></section>
 <section id="exit-modal" hidden role="dialog" aria-modal="true" aria-labelledby="exit-title"><div class="dialog"><h2 id="exit-title">Quitter MilkyWan TV ?</h2><div class="actions"><button id="stay">Continuer</button><button id="quit">Quitter</button></div></div></section>
-<aside id="nerds-panel" hidden aria-labelledby="nerds-title"><div class="nerds-heading"><h2 id="nerds-title">Informations pour nerds</h2><button id="nerds-close" aria-label="Fermer les informations pour nerds">×</button></div><p class="nerds-caption">MilkyWan TV · Diagnostic du lecteur</p><dl id="nerds-values"></dl><canvas id="ts-graph" width="776" height="80" aria-label="Débit et erreurs sur 60 secondes"></canvas><p class="ts-legend"><span class="ts-key-rate">━ Débit mesuré</span> <span class="ts-key-err">▮ Discontinuités / erreurs</span> · 60 dernières secondes</p><p id="nerds-note"></p></aside>
+
+<aside id="nerds-panel" hidden aria-labelledby="nerds-title">
+  <div class="nerds-heading"><h2 id="nerds-title"><svg viewBox="0 0 24 24"><path d="M2.5 12h4l2.5-6 4 12 2.5-6h6"/></svg>Statistiques avancées</h2><button id="nerds-close">Fermer</button></div>
+  <div class="stats-grid">
+    <div class="stats-col">
+      <h3>Vidéo</h3><dl id="stats-video"></dl>
+      <h3>Audio</h3><dl id="stats-audio"></dl>
+      <h3>Réception</h3>
+      <div class="rate-row"><div><strong id="stats-rate">—</strong><span>Débit reçu</span></div><canvas id="ts-graph" width="300" height="84" aria-label="Débit et erreurs sur 60 secondes"></canvas></div>
+      <dl id="stats-reception"></dl>
+    </div>
+    <div class="stats-col">
+      <h3>Flux MPEG-TS</h3><dl id="stats-ts"></dl>
+      <table id="stats-pids"></table>
+      <p id="nerds-note"></p>
+    </div>
+  </div>
+</aside>
+
 <nav id="pc-controls" aria-label="Commandes PC"><button id="pc-channels">Chaînes</button><button id="pc-options">Options</button><button id="pc-nerds">Infos nerds</button><button id="pc-fullscreen">Plein écran</button></nav></div>
 <script>if(typeof tizen==="undefined"){document.write('<script src="vendor/mpegts-1.8.2.js"><\/script><script src="web-player.js"><\/script>');}</script><script src="data.js"></script><script src="stats.js"></script><script src="app.js"></script>
 </body></html>

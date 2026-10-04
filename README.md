@@ -4,23 +4,24 @@ Application Tizen Web pour regarder la télévision MilkyWan (FTTH) sur une TV S
 
 > **Projet indépendant et non officiel.** Il n'est ni développé ni soutenu par l'association MilkyWan. Il utilise la liste de chaînes et le guide publics du service, réservés aux abonnés FTTx MilkyWan : la TV doit être raccordée à ce réseau.
 
-![Liste des chaînes](docs/screenshots/01-liste-des-chaines.png)
+![Accueil](docs/screenshots/01-accueil.png)
 
-| Bandeau du programme | Pistes audio | Statistiques pour nerds |
-|---|---|---|
-| ![Infos](docs/screenshots/02-bandeau-infos.png) | ![Audio](docs/screenshots/03-bandeau-audio.png) | ![Nerds](docs/screenshots/10-stats-nerds-graphe.png) |
-| **Menu options** | **Bandeau nerds** | **Liste pendant la lecture** |
-| ![Options](docs/screenshots/08-menu-options.png) | ![Nerds](docs/screenshots/05-bandeau-nerds.png) | ![Liste](docs/screenshots/09-liste-pendant-la-lecture.png) |
+| Liste pendant la lecture (l'image passe dans la fenêtre) | Bandeau du programme |
+|---|---|
+| ![Liste](docs/screenshots/04-liste-pendant-la-lecture.png) | ![Bandeau](docs/screenshots/02-bandeau.png) |
+| **Choix de la piste audio** | **Statistiques avancées (flux MPEG-TS)** |
+| ![Audio](docs/screenshots/03-pistes-audio.png) | ![Stats](docs/screenshots/05-statistiques.png) |
 
-*Captures prises sur la TV : la vidéo est affichée par le lecteur matériel Samsung, sous l'interface, elle apparaît donc en noir.*
+*Captures prises sur la TV. La vidéo est affichée par le lecteur matériel Samsung, sous l'interface : elle apparaît donc en noir.*
 
 ## Fonctionnalités
 
+- **Interface aux couleurs MilkyWan** : liste des chaînes avec sections Favoris et Toutes les chaînes. Pendant la lecture, l'image continue dans une fenêtre à côté de la liste, avec le programme en cours et les suivants. Bandeau translucide avec des boutons en pilule.
 - **Lecteur matériel Samsung AVPlay** en plein écran, 1080i et UHD (HEVC).
 - **Zapping rapide** : les chaînes précédente et suivante, ainsi que la chaîne surlignée dans la liste, sont préparées en arrière-plan. Le changement de chaîne prend environ 0,8 s au lieu d'environ 4 s.
 - **Guide des programmes** (XMLTV) : programme en cours, progression, programme suivant et résumé. Il est chargé en arrière-plan et mis en cache pour un affichage immédiat au lancement.
 - **Pistes audio et sous-titres** choisis directement dans le bandeau.
-- **Statistiques pour nerds** : résolution, codecs et état du lecteur. Débits vidéo et audio **mesurés**, avec détection des **discontinuités (CC)**, **paquets corrompus (TEI)** et **pertes de synchro TS**, plus un **graphe des 60 dernières secondes** (débit et erreurs).
+- **Statistiques avancées** : codec, définition, langue, débit reçu avec un graphe sur 60 s, discontinuités (CC), paquets corrompus (TEI) et pertes de synchro. À droite, le **contenu du flux MPEG-TS** : programme, table PMT et un PID par ligne avec son codec, sa langue et son débit.
 - **Favoris, groupes et recherche.**
 - Pensé pour la **télécommande Samsung Smart Remote** (sans touches de couleur) : tout se fait avec les flèches et OK.
 - Version **PC** de dépannage, avec un navigateur et un petit relais Python local.
@@ -31,8 +32,8 @@ Application Tizen Web pour regarder la télévision MilkyWan (FTTH) sur une TV S
 |---|---|
 | ↑ ↓ | Ouvrir la liste des chaînes et la parcourir |
 | OK | Regarder la chaîne sélectionnée |
-| ← → | Bandeau : Infos / Audio / Sous-titres / Nerds / Options |
-| OK sur *Nerds* | Statistiques détaillées par-dessus la vidéo |
+| ← → | Bandeau : Infos / Audio / Sous-titres / Stats / Options |
+| OK sur *Stats* | Statistiques avancées par-dessus la vidéo |
 | OK sur *Options* | Favoris, groupes, recherche, actualiser, paramètres, quitter |
 | CH ∧ ∨ | Zapper dans la sélection actuelle |
 | Retour | Fermer la liste, le bandeau ou le menu sans couper le direct |
@@ -87,5 +88,4 @@ La lecture passe par mpegts.js et MSE. La plupart des chaînes sont diffusées e
 
 - Code de MilkyWan TV : **GNU GPL v3.0** (`LICENSE`). Vous pouvez l'utiliser, le modifier et le redistribuer, à condition de publier vos modifications sous la même licence.
 - mpegts.js : Apache License 2.0 (`vendor/mpegts-LICENSE`), modifié comme indiqué ci-dessus.
-- Le fond étoilé (`galaxy.jpg`) est généré par programme pour ce projet.
 - MilkyWan est le nom du fournisseur d'accès associatif. Ce projet n'y est pas affilié.

@@ -1,5 +1,16 @@
 # Journal des versions
 
+## 2.0.0 — 4 octobre 2026
+
+Nouvelle interface aux couleurs MilkyWan (bleu nuit, menthe, violet).
+
+- Liste des chaînes avec les sections **Favoris** et **Toutes les chaînes**, une étoile par chaîne et un indicateur sur la chaîne en cours.
+- Pendant la lecture, **l'image continue dans une fenêtre** à côté de la liste (`setDisplayRect`). Dessous : programme en cours, progression, résumé et trois programmes suivants. L'heure est affichée.
+- **Bandeau** en carte translucide : grand titre, progression, résumé, « Ensuite… » et **boutons en pilule** (Infos, langue audio, Sous-titres, Stats, Options). Les pistes audio et de sous-titres s'affichent sous les boutons.
+- **Statistiques avancées** sur deux colonnes : Vidéo, Audio et Réception à gauche ; **flux MPEG-TS** à droite (programme, table PMT, un PID par ligne avec codec, langue et débit).
+- Pistes audio : « Version originale » (qaa) et « Audiodescription » (qad) reconnues ; les pistes de même langue sont numérotées.
+- Le fond étoilé est remplacé par le dégradé de la charte.
+
 ## 1.9.0 — 4 octobre 2026
 
 - Analyse du flux MPEG-TS dans les statistiques pour nerds : discontinuités (compteurs de continuité), paquets corrompus (TEI) et pertes de synchro, avec le total et le nombre sur les 60 dernières secondes.
