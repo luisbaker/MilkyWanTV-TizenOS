@@ -121,7 +121,7 @@
   function prebuffer(slot,ch){clearTimeout(preTimers[slot]);if(!ch||(playing&&ch.key===playing.key))return cancelPrebuffer(slot);var other=findPre(ch);if(other){if(other!==slot)cancelPrebuffer(slot);return;}
     cancelPrebuffer(slot);var p=freePlayer();if(!p)return;var entry={player:p,ch:ch,ready:false,time:0,onReady:null};pre[slot]=entry;
     function drop(){if(pre[slot]===entry)cancelPrebuffer(slot);if(entry.onReady)entry.onReady(false);}
-    try{p.open(ch.url);setUserAgent(p);p.setStreamingProperty('PREBUFFER_MODE','0');p.setBufferingParam('PLAYER_BUFFER_FOR_PLAY','PLAYER_BUFFER_SIZE_IN_SECOND',1);p.setBufferingParam('PLAYER_BUFFER_FOR_RESUME','PLAYER_BUFFER_SIZE_IN_SECOND',1);
+    try{p.open(ch.url);setUserAgent(p);p.setStreamingProperty('PREBUFFER_MODE','0');var secs=isHLS(ch)?3:1;p.setBufferingParam('PLAYER_BUFFER_FOR_PLAY','PLAYER_BUFFER_SIZE_IN_SECOND',secs);p.setBufferingParam('PLAYER_BUFFER_FOR_RESUME','PLAYER_BUFFER_SIZE_IN_SECOND',secs);
       p.prepareAsync(function(){entry.ready=true;entry.time=Date.now();if(entry.onReady)return entry.onReady(true);if(pre[slot]!==entry)return;
         // Refresh a held prebuffer before it gets old, so a switch always lands on (near) live.
         entry.refresh=setTimeout(function(){if(pre[slot]===entry){cancelPrebuffer(slot);prebuffer(slot,ch);}},PRE_MAX_AGE-5000);},drop);}catch(e){drop();}}
@@ -131,7 +131,12 @@
   function neighbour(delta){var list=filtered.length?filtered:channels;if(!playing||!list.length)return null;var i=list.findIndex(function(ch){return ch.key===playing.key;});return list[(i+delta+list.length)%list.length];}
   var USER_AGENT='MilkyWan-TizenOS non officiel';
   function setUserAgent(player){try{player.setStreamingProperty('USER_AGENT',USER_AGENT);}catch(e){}}
-  function listen(player,token){player.setListener({onbufferingstart:function(){if(token===playToken)message('Mise en mémoire tampon…');},onbufferingcomplete:function(){if(token===playToken){message('');armHide();}},onerror:function(error){fail(String(error),token);},onstreamcompleted:function(){fail('le flux a été interrompu',token);},onsubtitlechange:function(duration,value){if(token!==playToken||!subtitlesEnabled)return;clearTimeout(subtitleTimer);$('subtitle-text').textContent=value;$('subtitle-text').hidden=!value;subtitleTimer=setTimeout(function(){$('subtitle-text').hidden=true;},Math.max(0,Number(duration)||0));}});}
+  // Live streams (HLS especially) sometimes report an end or an error on a playlist hiccup: reopen the same
+  // channel instead of giving up, at most 3 times per minute.
+  var retries=[];
+  function recover(token,reason){if(token!==playToken||!playing)return;var now=Date.now(),ch=playing;retries=retries.filter(function(t){return now-t<60000;});
+    if(retries.length>=3){fail(reason,token);return;}retries.push(now);busy=false;pendingChannel=null;clearTimeout(playTimer);message('Reconnexion au direct…');start(ch,ui==='channels');}
+  function listen(player,token){player.setListener({onbufferingstart:function(){if(token===playToken)message('Mise en mémoire tampon…');},onbufferingcomplete:function(){if(token===playToken){message('');armHide();}},onerror:function(error){recover(token,String(error));},onstreamcompleted:function(){recover(token,'le flux a été interrompu');},onsubtitlechange:function(duration,value){if(token!==playToken||!subtitlesEnabled)return;clearTimeout(subtitleTimer);$('subtitle-text').textContent=value;$('subtitle-text').hidden=!value;subtitleTimer=setTimeout(function(){$('subtitle-text').hidden=true;},Math.max(0,Number(duration)||0));}});}
   // A channel picked while the previous one was still connecting wins: start it instead.
   function takePending(){clearTimeout(playTimer);busy=false;if(!pendingChannel)return false;var next=pendingChannel;pendingChannel=null;start(next);return true;}
   function mark(name){try{performance.mark('mw-'+name);}catch(e){}}
@@ -139,7 +144,7 @@
   function openStream(ch,token){
     try{mark('open');av.open(ch.url);setUserAgent(av);applyRect();av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
       // Live IPTV: AVPlay's default pre-roll buffer delays the first frame by ~6.5 s on these streams (measured: 10.3 s -> 3.8 s). 1 s is the minimum AVPlay accepts; 0 or byte sizes silently fall back to the 10 s default.
-      if(av.setBufferingParam){try{av.setBufferingParam('PLAYER_BUFFER_FOR_PLAY','PLAYER_BUFFER_SIZE_IN_SECOND',1);av.setBufferingParam('PLAYER_BUFFER_FOR_RESUME','PLAYER_BUFFER_SIZE_IN_SECOND',1);}catch(ignore){}}
+      if(av.setBufferingParam){var secs=isHLS(ch)?3:1;try{av.setBufferingParam('PLAYER_BUFFER_FOR_PLAY','PLAYER_BUFFER_SIZE_IN_SECOND',secs);av.setBufferingParam('PLAYER_BUFFER_FOR_RESUME','PLAYER_BUFFER_SIZE_IN_SECOND',secs);}catch(ignore){}}
       listen(av,token);
       mark('prepare');av.prepareAsync(function(){mark('prepared');if(token!==playToken||takePending())return;try{av.setSilentSubtitle(true);av.play();onPlaying();}catch(e){fail(e.message,token);}},function(error){if(token!==playToken)return;busy=false;if(pendingChannel){var next=pendingChannel;pendingChannel=null;start(next);return;}fail(error.message||String(error),token);});
     }catch(error){fail(error.message||String(error),token);}

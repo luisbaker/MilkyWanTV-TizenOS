@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 2.2.1 — 4 octobre 2026
+
+- **Reconnexion automatique** : si un flux en direct signale une fin ou une erreur (fréquent en HLS lors d'un rafraîchissement de playlist), la chaîne est relancée toute seule, jusqu'à 3 fois par minute, au lieu d'afficher « Lecture impossible ».
+- Flux HLS : tampon de 3 s (1 s pour les flux MPEG-TS MilkyWan), adapté à leurs segments de plusieurs secondes.
+
 ## 2.2.0 — 4 octobre 2026
 
 - **Listes de chaînes supplémentaires** : des listes M3U personnelles (`local/*.m3u`, non publiées) s'ajoutent à la liste MilkyWan, chacune dans sa propre section de la liste.
