@@ -8,7 +8,7 @@ Application Tizen Web pour regarder la télévision MilkyWan (FTTH) sur une TV S
 
 | Bandeau du programme | Pistes audio | Statistiques pour nerds |
 |---|---|---|
-| ![Infos](docs/screenshots/02-bandeau-infos.png) | ![Audio](docs/screenshots/03-bandeau-audio.png) | ![Nerds](docs/screenshots/06-stats-pour-nerds.png) |
+| ![Infos](docs/screenshots/02-bandeau-infos.png) | ![Audio](docs/screenshots/03-bandeau-audio.png) | ![Nerds](docs/screenshots/10-stats-nerds-graphe.png) |
 | **Menu options** | **Bandeau nerds** | **Liste pendant la lecture** |
 | ![Options](docs/screenshots/08-menu-options.png) | ![Nerds](docs/screenshots/05-bandeau-nerds.png) | ![Liste](docs/screenshots/09-liste-pendant-la-lecture.png) |
 
@@ -20,7 +20,7 @@ Application Tizen Web pour regarder la télévision MilkyWan (FTTH) sur une TV S
 - **Zapping rapide** : les chaînes précédente et suivante, ainsi que la chaîne surlignée dans la liste, sont préparées en arrière-plan. Le changement de chaîne prend environ 0,8 s au lieu d'environ 4 s.
 - **Guide des programmes** (XMLTV) : programme en cours, progression, programme suivant et résumé. Il est chargé en arrière-plan et mis en cache pour un affichage immédiat au lancement.
 - **Pistes audio et sous-titres** choisis directement dans le bandeau.
-- **Statistiques pour nerds** : résolution, codecs, débits annoncés et état du lecteur, mises à jour en direct.
+- **Statistiques pour nerds** : résolution, codecs et état du lecteur. Débits vidéo et audio **mesurés**, avec détection des **discontinuités (CC)**, **paquets corrompus (TEI)** et **pertes de synchro TS**, plus un **graphe des 60 dernières secondes** (débit et erreurs).
 - **Favoris, groupes et recherche.**
 - Pensé pour la **télécommande Samsung Smart Remote** (sans touches de couleur) : tout se fait avec les flèches et OK.
 - Version **PC** de dépannage, avec un navigateur et un petit relais Python local.
@@ -80,6 +80,7 @@ La lecture passe par mpegts.js et MSE. La plupart des chaînes sont diffusées e
 - **Pré-chargement** : l'application utilise jusqu'à 4 instances `webapis.avplaystore` en `PREBUFFER_MODE`, dans un pool fixe réutilisé. Créer de nouvelles instances finit par épuiser les décodeurs.
 - **Guide** : un analyseur XMLTV par chaînes de caractères tourne dans un Web Worker et ne garde que les 36 prochaines heures. Il est environ 6 fois plus rapide que `DOMParser`.
 - **mpegts.js 1.8.2** (version PC) est corrigé pour les flux DVB : audio AC-3/E-AC-3 signalé par descripteur, keyframes sans IDR, paires de trames entrelacées (PAFF). Le détail figure en tête de `vendor/mpegts-1.8.2.js`.
+- **Analyse MPEG-TS** (`ts-monitor.js`) : AVPlay ne donne aucune statistique de paquets. Quand le panneau nerds est ouvert, un Web Worker lit donc le même flux sur une seconde connexion. Il vérifie chaque paquet de 188 octets (compteurs de continuité par PID, bit TEI, octet de synchro 0x47) et sépare les débits vidéo et audio grâce aux tables PAT/PMT. Coût : environ +20 % de CPU, uniquement pendant l'affichage du panneau.
 - User-Agent des flux : `MilkyWan-TizenOS non officiel`.
 
 ## Licences

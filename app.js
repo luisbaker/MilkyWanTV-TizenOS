@@ -117,13 +117,32 @@
   }
   // Read-only hooks for on-device diagnostics (remote inspector).
   window.MilkyDebug={player:function(){return av;},prebuffer:function(){var o={};for(var k in pre)o[k]=pre[k].ch.name+(pre[k].ready?' READY':' preparing');return o;}};
-  function stop(){++playToken;busy=false;pendingChannel=null;cancelPrebuffer();clearTimeout(playTimer);clearTimeout(hideTimer);closeAV();resetSubtitles();playing=null;document.body.classList.remove('playing');message('');showChannels();}
+  function stop(){++playToken;busy=false;pendingChannel=null;cancelPrebuffer();stopTsMonitor();clearTimeout(playTimer);clearTimeout(hideTimer);closeAV();resetSubtitles();playing=null;document.body.classList.remove('playing');message('');showChannels();}
   function zap(delta){var list=filtered.length?filtered:channels,reference=pendingChannel||playing||selected;if(!list.length)return;var index=list.findIndex(function(ch){return reference&&ch.key===reference.key;});zapDirection=delta;start(list[(index+delta+list.length)%list.length]);}
   function togglePause(force){if(!playing||busy||!av)return;try{var state=av.getState();if(state==='PLAYING'&&force!=='play'){av.pause();$('paused').hidden=false;showBanner(0);clearTimeout(hideTimer);}else if(state==='PAUSED'&&force!=='pause'){av.play();$('paused').hidden=true;armHide();}}catch(e){status('Pause indisponible sur ce flux : '+e.message);}}
   function fillStats(list){var report=window.MilkyStats.collect(av,playing,subtitlesEnabled),fragment=document.createDocumentFragment();report.rows.forEach(function(row){fragment.appendChild(text('dt',row[0]));fragment.appendChild(text('dd',row[1]));});list.textContent='';list.appendChild(fragment);return report;}
   function renderBannerNerds(){if(!$('banner').hidden&&tabIndex===3)fillStats($('banner-nerds'));}
-  function updateNerds(){renderBannerNerds();if($('nerds-panel').hidden)return;var report=window.MilkyStats.collect(av,playing,subtitlesEnabled);$('nerds-values').textContent='';report.rows.forEach(function(row){$('nerds-values').appendChild(text('dt',row[0]));$('nerds-values').appendChild(text('dd',row[1]));});$('nerds-note').textContent=report.note||'Débits annoncés par le flux ; ils ne mesurent pas votre connexion.';}
-  function closeNerds(){$('nerds-panel').hidden=true;if(ui==='video')$('video-hit').focus();else if(ui==='banner')$(tabIds[tabIndex]).focus();else focusChannel(selected&&selected.key);}
+  // Stream health: AVPlay exposes no packet statistics, so while the stats overlay is open a worker reads
+  // the same stream on a second connection and checks every MPEG-TS packet (see ts-monitor.js).
+  var tsWorker=null,tsHistory=[],tsTotals=null,tsChannel=null,tsError='';
+  function stopTsMonitor(){if(tsWorker){tsWorker.terminate();tsWorker=null;}tsChannel=null;}
+  function startTsMonitor(){stopTsMonitor();if(!playing||!window.Worker)return;tsChannel=playing.key;tsHistory=[];tsTotals={cc:0,tei:0,sync:0,seconds:0};tsError='';drawTsGraph();
+    try{tsWorker=new Worker('ts-monitor.js');}catch(e){tsError='analyse indisponible';return;}
+    tsWorker.onmessage=function(event){var s=event.data;if(s.error){tsError=s.error;return;}tsHistory.push(s);if(tsHistory.length>60)tsHistory.shift();tsTotals.cc+=s.cc;tsTotals.tei+=s.tei;tsTotals.sync+=s.sync;tsTotals.seconds++;drawTsGraph();};
+    tsWorker.postMessage({cmd:'start',url:new URL(networkURL(playing.url),window.location.href).href});}
+  function drawTsGraph(){var c=$('ts-graph'),g=c.getContext('2d'),w=c.width,h=c.height,n=60,step=w/(n-1);g.clearRect(0,0,w,h);
+    g.strokeStyle='rgba(255,255,255,.08)';g.lineWidth=1;for(var y=1;y<4;y++){g.beginPath();g.moveTo(0,h*y/4);g.lineTo(w,h*y/4);g.stroke();}
+    var max=1;tsHistory.forEach(function(s){max=Math.max(max,s.bytes*8/1e6);});max*=1.25;var off=n-tsHistory.length;
+    tsHistory.forEach(function(s,i){var e=s.cc+s.tei+s.sync;if(!e)return;var bh=h*Math.min(1,0.25+e/20);g.fillStyle='rgba(255,90,90,.85)';g.fillRect((off+i)*step-4,h-bh,8,bh);});
+    g.strokeStyle='#7fd4ff';g.lineWidth=3;g.beginPath();tsHistory.forEach(function(s,i){var x=(off+i)*step,y=h-6-(h-12)*(s.bytes*8/1e6)/max;if(i)g.lineTo(x,y);else g.moveTo(x,y);});g.stroke();
+    g.fillStyle='#aebccd';g.font='13px monospace';g.fillText(max.toFixed(1)+' Mbit/s',5,13);}
+  function tsRows(){if(!tsTotals)return [];if(tsError&&!tsHistory.length)return [['Analyse du flux','Indisponible : '+tsError]];
+    var recent=tsHistory.slice(-5),last60=function(k){return tsHistory.reduce(function(a,s){return a+s[k];},0);};
+    function count(k){return tsTotals[k]+' (60 s : '+last60(k)+')';}
+    function mbps(k){var v=recent.length?recent.reduce(function(a,s){return a+(s[k]||0);},0)*8/1e6/recent.length:0;return v?v.toLocaleString('fr-FR',{maximumFractionDigits:2})+' Mbit/s':'Mesure en cours…';}
+    return [['Débit total mesuré',mbps('bytes')],['Débit vidéo mesuré',mbps('video')],['Débit audio mesuré (toutes pistes)',mbps('audio')],['Discontinuités (CC)',count('cc')],['Paquets corrompus (TEI)',count('tei')],['Pertes de synchro TS',count('sync')],['Durée d’analyse',tsTotals.seconds+' s'+(tsError?' · '+tsError:'')]];}
+  function updateNerds(){renderBannerNerds();if($('nerds-panel').hidden)return;if(playing&&playing.key!==tsChannel)startTsMonitor();else if(!playing)stopTsMonitor();var report=window.MilkyStats.collect(av,playing,subtitlesEnabled),fragment=document.createDocumentFragment();report.rows.filter(function(row){return !(/^Débit .* annoncé$/.test(row[0])&&(row[1]==='Non fourni'||/^0(,0+)? /.test(row[1])));}).concat(tsRows()).forEach(function(row){fragment.appendChild(text('dt',row[0]));fragment.appendChild(text('dd',row[1]));});$('nerds-values').textContent='';$('nerds-values').appendChild(fragment);$('nerds-note').textContent=report.note||'Les débits mesurés et les erreurs proviennent d’une seconde lecture du même flux, active uniquement pendant l’affichage de ce panneau.';}
+  function closeNerds(){$('nerds-panel').hidden=true;stopTsMonitor();if(ui==='video')$('video-hit').focus();else if(ui==='banner')$(tabIds[tabIndex]).focus();else focusChannel(selected&&selected.key);}
   function toggleNerds(){if(!$('nerds-panel').hidden){closeNerds();return;}$('options-modal').hidden=true;if(playing)hideUI();$('nerds-panel').hidden=false;updateNerds();$('nerds-close').focus();}
   $('pc-channels').onclick=showChannels;$('pc-options').onclick=openOptions;$('pc-nerds').onclick=toggleNerds;$('pc-fullscreen').onclick=function(){var target=document.documentElement;if(!target.requestFullscreen||!document.exitFullscreen){status('Le plein écran est indisponible dans ce navigateur.');return;}var promise=document.fullscreenElement?document.exitFullscreen():target.requestFullscreen();if(promise&&promise.catch)promise.catch(function(){status('Le plein écran est indisponible dans ce navigateur.');});};
   $('nerds').onclick=toggleNerds;$('nerds-close').onclick=closeNerds;setInterval(updateNerds,2000);

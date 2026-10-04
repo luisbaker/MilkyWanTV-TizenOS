@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 1.9.0 — 4 octobre 2026
+
+- Analyse du flux MPEG-TS dans les statistiques pour nerds : discontinuités (compteurs de continuité), paquets corrompus (TEI) et pertes de synchro, avec le total et le nombre sur les 60 dernières secondes.
+- Graphe des 60 dernières secondes : débit mesuré et secondes avec erreurs.
+- Débits vidéo et audio mesurés à partir des paquets. Les débits « annoncés » vides (« Non fourni », 0) sont masqués.
+- Panneau nerds plus compact : deux colonnes, environ 450 px de haut au lieu de tout l'écran.
+- `build.sh` : correction d'une apostrophe qui cassait `./build.sh install`.
+
 ## 1.8.0 — 3 octobre 2026
 
 Première version publique.

@@ -20,7 +20,7 @@ mv "$BUILD"/*.wgt dist/MilkyWanTV.wgt
 echo "Paquet signé : dist/MilkyWanTV.wgt"
 
 [ "${1:-}" = install ] || exit 0
-: "${TV_IP:?Définissez TV_IP avec l'adresse IP de la TV, par ex. TV_IP=192.168.1.20 ./build.sh install}"
+: "${TV_IP:?Définissez TV_IP avec IP de la TV, exemple : TV_IP=192.168.1.20 ./build.sh install}"
 command -v sdb >/dev/null || { echo "Commande sdb introuvable : ajoutez tizen-studio/tools au PATH." >&2; exit 1; }
 sdb connect "$TV_IP"
 DEVICE=$(sdb devices | awk -v ip="$TV_IP" 'index($1, ip) == 1 { print $3 }')
