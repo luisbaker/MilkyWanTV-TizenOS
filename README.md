@@ -18,6 +18,7 @@ Application Tizen Web pour regarder la télévision MilkyWan (FTTH) sur une TV S
 
 - **Interface aux couleurs MilkyWan** : liste des chaînes avec sections Favoris et Toutes les chaînes. Pendant la lecture, l'image continue dans une fenêtre à côté de la liste, avec le programme en cours et les suivants. Bandeau translucide avec des boutons en pilule.
 - **Lecteur matériel Samsung AVPlay** en plein écran, 1080i et UHD (HEVC).
+- **Démarrage direct** : à l'ouverture, la dernière chaîne regardée démarre dans la fenêtre à côté de la liste.
 - **Zapping rapide** : les chaînes précédente et suivante, ainsi que la chaîne surlignée dans la liste, sont préparées en arrière-plan. Le changement de chaîne prend environ 0,8 s au lieu d'environ 4 s.
 - **Guide des programmes** (XMLTV) : programme en cours, progression, programme suivant et résumé. Il est chargé en arrière-plan et mis en cache pour un affichage immédiat au lancement.
 - **Pistes audio et sous-titres** choisis directement dans le bandeau.

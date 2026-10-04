@@ -40,7 +40,12 @@
   }
   function focusChannel(key){var buttons=$('channels').querySelectorAll('button'),target=buttons[0];for(var i=0;i<buttons.length;i++)if(buttons[i].dataset.key===key)target=buttons[i];if(target){target.focus();target.scrollIntoView({block:'nearest'});}else $('video-hit').focus();}
   function toggleFavorite(){var ch=favoriteTarget();if(!ch)return;var key=ch.key,index=favorites.indexOf(key);if(index<0)favorites.push(key);else favorites.splice(index,1);write('mw.favorites',favorites);render(ui==='channels'?key:null);}
-  function load(){if(av&&av.isWeb&&window.location.protocol==='file:'){status('Sur PC, ouvrez Lancer-PC.command (Mac) ou Lancer-PC.bat (Windows) pour lancer la version web locale.');return;}var token=++loadToken;status('Chargement des chaînes…');request(sources.m3u).then(function(body){if(token!==loadToken)return;channels=D.parseM3U(body,sources.m3u);epg={programmes:{},names:{}};render(document.activeElement.dataset.key);if(ui==='channels'&&!dialogOpen())focusChannel(selected&&selected.key);var cached=read('mw.epg',null);if(cached&&cached.src===sources.epg&&cached.epg){epg=cached.epg;refreshRows();updateBanner();status('');}else status('Chargement du guide…');var src=sources.epg;return loadEPG(src).then(function(result){if(token!==loadToken)return;epg=result;refreshRows();updateBanner();status('');setTimeout(function(){try{localStorage.setItem('mw.epg',JSON.stringify({src:src,time:Date.now(),epg:result}));}catch(e){try{localStorage.removeItem('mw.epg');}catch(ignore){}}},3000);},function(error){if(token!==loadToken)return;if(!cached)status('Guide indisponible : '+error.message+'. Les chaînes restent accessibles.');});}).catch(function(error){if(token===loadToken)status(error.message+'. Vérifiez votre connexion MilkyWan ou les adresses dans les options (bouton rouge).');});}
+  function load(){if(av&&av.isWeb&&window.location.protocol==='file:'){status('Sur PC, ouvrez Lancer-PC.command (Mac) ou Lancer-PC.bat (Windows) pour lancer la version web locale.');return;}var token=++loadToken;status('Chargement des chaînes…');request(sources.m3u).then(function(body){if(token!==loadToken)return;channels=D.parseM3U(body,sources.m3u);epg={programmes:{},names:{}};if(playing){var real=channels.filter(function(c){return c.key===playing.key;})[0];if(real){playing=real;selected=real;}}render(document.activeElement.dataset.key);markPlaying();if(!autoStarted){autoStarted=true;setTimeout(autoResume,0);}if(ui==='channels'&&!dialogOpen())focusChannel(selected&&selected.key);var cached=read('mw.epg',null);if(cached&&cached.src===sources.epg&&cached.epg){epg=cached.epg;refreshRows();updateBanner();status('');}else status('Chargement du guide…');var src=sources.epg;return whenSettled().then(function(){return loadEPG(src);}).then(function(result){if(token!==loadToken)return;epg=result;refreshRows();updateBanner();status('');setTimeout(function(){try{localStorage.setItem('mw.epg',JSON.stringify({src:src,time:Date.now(),epg:result}));}catch(e){try{localStorage.removeItem('mw.epg');}catch(ignore){}}},3000);},function(error){if(token!==loadToken)return;if(!cached)status('Guide indisponible : '+error.message+'. Les chaînes restent accessibles.');});}).catch(function(error){if(token===loadToken)status(error.message+'. Vérifiez votre connexion MilkyWan ou les adresses dans les options (bouton rouge).');});}
+  // Downloading and parsing the 24 MB guide competes with AVPlay for network and CPU: refresh it only once the
+  // stream being opened shows a picture (the cached guide is displayed meanwhile).
+  var settleWaiters=[];
+  function whenSettled(){return new Promise(function(resolve){if(!busy)return resolve();settleWaiters.push(resolve);setTimeout(resolve,12000);});}
+  function settled(){var list=settleWaiters;settleWaiters=[];setTimeout(function(){list.forEach(function(r){r();});},1500);}
   // The 20+ MB XMLTV file is downloaded and parsed in a Web Worker; main-thread parsing is only a fallback.
   function loadEPG(url){var target=networkURL(url);return new Promise(function(resolve,reject){var worker,done=false;
       function fallback(){if(done)return;done=true;if(worker)worker.terminate();request(url).then(function(xml){resolve(D.parseEPGText(xml,Date.now()));}).catch(reject);}
@@ -49,10 +54,12 @@
       worker.onerror=function(event){if(event&&event.preventDefault)event.preventDefault();fallback();};
       worker.postMessage({url:new URL(target,window.location.href).href});});}
   function dialogOpen(){return ['options-modal','modal','exit-modal'].some(function(id){return !$(id).hidden;});}
-  function armHide(){clearTimeout(hideTimer);if(playing&&!busy&&!dialogOpen()&&$('play-status').hidden)hideTimer=setTimeout(hideUI,8000);}
+  // The list keeps the picture visible in its window, so only the banner hides itself after 8 s.
+  function armHide(){clearTimeout(hideTimer);if(ui==='channels')return;if(playing&&!busy&&!dialogOpen()&&$('play-status').hidden)hideTimer=setTimeout(hideUI,8000);}
   // AVPlay draws the picture on a hardware plane: shrink it into the preview window while the list is open.
   var PREVIEW_RECT=[680,56,1184,666];
-  function setListOpen(open){document.body.classList.toggle('list-open',open);if(!av||!playing||busy)return;try{if(open)av.setDisplayRect(PREVIEW_RECT[0],PREVIEW_RECT[1],PREVIEW_RECT[2],PREVIEW_RECT[3]);else av.setDisplayRect(0,0,1920,1080);}catch(e){}}
+  function applyRect(){var r=document.body.classList.contains('list-open')?PREVIEW_RECT:[0,0,1920,1080];try{av.setDisplayRect(r[0],r[1],r[2],r[3]);}catch(e){}}
+  function setListOpen(open){document.body.classList.toggle('list-open',open);if(!av||!playing||busy)return;applyRect();}
   function hideUI(){clearTimeout(hideTimer);if(!playing||dialogOpen())return;ui='video';$('home').hidden=true;setListOpen(false);$('banner').hidden=true;document.body.classList.remove('banner-open');$('video-hit').focus();}
   function showChannels(keepFilter){clearTimeout(hideTimer);ui='channels';$('banner').hidden=true;document.body.classList.remove('banner-open');$('home').hidden=false;setListOpen(true);updatePreview();
     // Always reopen the list at the channel currently being watched.
@@ -85,7 +92,7 @@
   function message(value){$('play-status').textContent=value;$('play-status').hidden=!value;}
   function closeAV(){if(!av)return;try{var state=av.getState();if(state!=='NONE'&&state!=='IDLE')av.stop();av.close();}catch(e){try{av.close();}catch(ignore){}}}
   function resetSubtitles(){subtitlesEnabled=false;clearTimeout(subtitleTimer);$('subtitle-text').hidden=true;$('subtitle-text').textContent='';}
-  function fail(error,token){if(token!==playToken)return;clearTimeout(playTimer);busy=false;pendingChannel=null;closeAV();resetSubtitles();playing=null;document.body.classList.remove('playing');message('Lecture impossible : '+error+'. Choisissez une autre chaîne ou vérifiez votre connexion.');showChannels();}
+  function fail(error,token){if(token!==playToken)return;settled();clearTimeout(playTimer);busy=false;pendingChannel=null;closeAV();resetSubtitles();playing=null;document.body.classList.remove('playing');message('Lecture impossible : '+error+'. Choisissez une autre chaîne ou vérifiez votre connexion.');showChannels();}
   // Fast channel change ("predictive pre-joining"): spare AVPlay instances prepare CH+, CH- and the channel
   // highlighted in the list in PREBUFFER_MODE (measured on TU70DU7105: picture 0.7 s after the switch instead
   // of ~4 s). AVPlayStore allows 4 players; a fixed pool is reused because creating new ones leaks decoders.
@@ -110,25 +117,32 @@
   function listen(player,token){player.setListener({onbufferingstart:function(){if(token===playToken)message('Mise en mémoire tampon…');},onbufferingcomplete:function(){if(token===playToken){message('');armHide();}},onerror:function(error){fail(String(error),token);},onstreamcompleted:function(){fail('le flux a été interrompu',token);},onsubtitlechange:function(duration,value){if(token!==playToken||!subtitlesEnabled)return;clearTimeout(subtitleTimer);$('subtitle-text').textContent=value;$('subtitle-text').hidden=!value;subtitleTimer=setTimeout(function(){$('subtitle-text').hidden=true;},Math.max(0,Number(duration)||0));}});}
   // A channel picked while the previous one was still connecting wins: start it instead.
   function takePending(){clearTimeout(playTimer);busy=false;if(!pendingChannel)return false;var next=pendingChannel;pendingChannel=null;start(next);return true;}
-  function onPlaying(){window.MilkyDebug.playedAt=performance.now();message('');markPlaying();updateAudioLabel();if(ui==='channels')setListOpen(true);armHide();if(ui==='banner'&&(tabIndex===1||tabIndex===2))renderTracks(tabIndex===1?'AUDIO':'TEXT');Object.keys(pre).forEach(function(k){if(k!=='focus')cancelPrebuffer(k);});if(pre.focus&&(pre.focus.ch.key===playing.key))cancelPrebuffer('focus');schedulePrebuffer(zapDirection>0?'next':'prev',neighbour(zapDirection),300);schedulePrebuffer(zapDirection>0?'prev':'next',neighbour(-zapDirection),800);}
+  function mark(name){try{performance.mark('mw-'+name);}catch(e){}}
+  function onPlaying(){mark('playing');window.MilkyDebug.playedAt=performance.now();settled();message('');markPlaying();updateAudioLabel();if(ui==='channels')setListOpen(true);armHide();if(ui==='banner'&&(tabIndex===1||tabIndex===2))renderTracks(tabIndex===1?'AUDIO':'TEXT');Object.keys(pre).forEach(function(k){if(k!=='focus')cancelPrebuffer(k);});if(pre.focus&&(pre.focus.ch.key===playing.key))cancelPrebuffer('focus');schedulePrebuffer(zapDirection>0?'next':'prev',neighbour(zapDirection),300);schedulePrebuffer(zapDirection>0?'prev':'next',neighbour(-zapDirection),800);}
   function openStream(ch,token){
-    try{av.open(ch.url);setUserAgent(av);av.setDisplayRect(0,0,1920,1080);av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
+    try{mark('open');av.open(ch.url);setUserAgent(av);applyRect();av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
       // Live IPTV: AVPlay's default pre-roll buffer delays the first frame by ~6.5 s on these streams (measured: 10.3 s -> 3.8 s). 1 s is the minimum AVPlay accepts; 0 or byte sizes silently fall back to the 10 s default.
       if(av.setBufferingParam){try{av.setBufferingParam('PLAYER_BUFFER_FOR_PLAY','PLAYER_BUFFER_SIZE_IN_SECOND',1);av.setBufferingParam('PLAYER_BUFFER_FOR_RESUME','PLAYER_BUFFER_SIZE_IN_SECOND',1);}catch(ignore){}}
       listen(av,token);
-      av.prepareAsync(function(){if(token!==playToken||takePending())return;try{av.setSilentSubtitle(true);av.play();onPlaying();}catch(e){fail(e.message,token);}},function(error){if(token!==playToken)return;busy=false;if(pendingChannel){var next=pendingChannel;pendingChannel=null;start(next);return;}fail(error.message||String(error),token);});
+      mark('prepare');av.prepareAsync(function(){mark('prepared');if(token!==playToken||takePending())return;try{av.setSilentSubtitle(true);av.play();onPlaying();}catch(e){fail(e.message,token);}},function(error){if(token!==playToken)return;busy=false;if(pendingChannel){var next=pendingChannel;pendingChannel=null;start(next);return;}fail(error.message||String(error),token);});
     }catch(error){fail(error.message||String(error),token);}
   }
-  function start(ch){if(busy){pendingChannel=ch;return;}resetSubtitles();chosenTracks={};playing=ch;selected=ch;select(ch);document.body.classList.add('playing');$('paused').hidden=true;message('Connexion au direct…');showBanner(0);
+  // Opening the app (or coming back to it) resumes the last channel watched. With prelaunch the page loads
+  // hidden at TV start-up, so nothing plays until it is actually on screen.
+  var autoStarted=false;
+  // The last channel is cached with its stream URL so playback can start before the M3U list is downloaded.
+  function lastChannel(){var last=read('mw.last',null);return last&&typeof last==='object'&&D.safeURL(last.url)?last:null;}
+  function autoResume(){if(playing||busy||document.hidden||dialogOpen())return;var last=lastChannel(),ch=(last&&channels.filter(function(c){return c.key===last.key;})[0])||(channels.length?channels[0]:last);if(ch)start(ch,true);}
+  function start(ch,inList){if(busy){pendingChannel=ch;return;}mark('start');var wasPlaying=!!playing;write('mw.last',{key:ch.key,id:ch.id,epgName:ch.epgName,name:ch.name,number:ch.number,logo:ch.logo,group:ch.group,url:ch.url});resetSubtitles();chosenTracks={};playing=ch;selected=ch;select(ch);document.body.classList.add('playing');$('paused').hidden=true;message('Connexion au direct…');if(inList){showChannels(true);focusChannel(ch.key);}else showBanner(0);
     var token=++playToken;if(!av){fail('le lecteur Samsung AVPlay est absent',token);return;}busy=true;playTimer=setTimeout(function(){fail('délai de connexion dépassé',token);},35000);
     var ready=takePrebuffer(ch);
     // Stopping the previous stream blocks ~200 ms in AVPlay: let the banner paint first, then switch.
-    requestAnimationFrame(function(){setTimeout(function(){if(token!==playToken){if(ready){try{ready.player.close();}catch(e){}}return;}closeAV();
-      if(ready){av=ready.player;var go=function(ok){if(token!==playToken)return;if(ok){try{av.setDisplayRect(0,0,1920,1080);av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');if(takePending())return;listen(av,token);av.setSilentSubtitle(true);av.play();onPlaying();return;}catch(e){}}try{av.close();}catch(ignore){}openStream(ch,token);};
+    (wasPlaying?function(f){requestAnimationFrame(function(){setTimeout(f,0);});}:function(f){f();})(function(){(function(){if(token!==playToken){if(ready){try{ready.player.close();}catch(e){}}return;}closeAV();
+      if(ready){av=ready.player;var go=function(ok){if(token!==playToken)return;if(ok){try{applyRect();av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');if(takePending())return;listen(av,token);av.setSilentSubtitle(true);av.play();onPlaying();return;}catch(e){}}try{av.close();}catch(ignore){}openStream(ch,token);};
         // Still preparing: adopt it and play as soon as it is ready instead of starting over.
         if(ready.ready)go(true);else ready.onReady=go;return;}
       openStream(ch,token);
-    },0);});
+    })();});
   }
   // Read-only hooks for on-device diagnostics (remote inspector).
   window.MilkyDebug={player:function(){return av;},prebuffer:function(){var o={};for(var k in pre)o[k]=pre[k].ch.name+(pre[k].ready?' READY':' preparing');return o;}};
@@ -196,6 +210,6 @@
     if(code===13&&ui==='video'){event.preventDefault();showBanner(0);}
   });
   if(window.tizen&&tizen.tvinputdevice){['ChannelUp','ChannelDown','ColorF0Red','ColorF1Green','ColorF3Blue','Info','MediaPlay','MediaPause','MediaPlayPause'].forEach(function(key){try{tizen.tvinputdevice.registerKey(key);}catch(e){}});}
-  document.addEventListener('visibilitychange',function(){if(document.hidden&&playing)stop();});window.addEventListener('unload',function(){cancelPrebuffer();closeAV();});
-  setInterval(function(){if(!dialogOpen()){if(ui==='channels')refreshRows();if(ui==='banner')updateBanner();}},30000);setInterval(function(){if(ui==='channels')$('clock').textContent=time(Date.now());},10000);setInterval(load,6*60*60*1000);$('video-hit').focus();load();
+  document.addEventListener('visibilitychange',function(){if(document.hidden){if(playing)stop();}else if(autoStarted)autoResume();});window.addEventListener('unload',function(){cancelPrebuffer();closeAV();});
+  setInterval(function(){if(!dialogOpen()){if(ui==='channels')refreshRows();if(ui==='banner')updateBanner();}},30000);setInterval(function(){if(ui==='channels')$('clock').textContent=time(Date.now());},10000);setInterval(load,6*60*60*1000);$('video-hit').focus();if(lastChannel()){autoStarted=true;autoResume();}load();
 })();

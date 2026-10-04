@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 2.1.0 — 4 octobre 2026
+
+- **Démarrage automatique** : à l'ouverture de l'app, la dernière chaîne regardée démarre dans la fenêtre, à côté de la liste. Même chose au retour dans l'app. Avec le lancement anticipé de la TV, rien n'est lu tant que l'app n'est pas à l'écran.
+- La dernière chaîne est mémorisée avec l'adresse de son flux : la lecture démarre sans attendre le téléchargement de la liste (image en environ 5,8 s après l'ouverture, au lieu d'environ 7,1 s).
+- Le rafraîchissement du guide (24 Mo) attend que l'image soit affichée ; le guide en cache est utilisé entre-temps.
+- La liste des chaînes ne se ferme plus seule après 8 s : l'image reste visible dans sa fenêtre. Retour passe en plein écran.
+
 ## 2.0.0 — 4 octobre 2026
 
 Nouvelle interface aux couleurs MilkyWan (bleu nuit, menthe, violet).
