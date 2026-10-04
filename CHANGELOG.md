@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 2.2.0 — 4 octobre 2026
+
+- **Listes de chaînes supplémentaires** : des listes M3U personnelles (`local/*.m3u`, non publiées) s'ajoutent à la liste MilkyWan, chacune dans sa propre section de la liste.
+- Chaque liste peut déclarer son guide (`#EXTM3U url-tvg="…"`) ; les guides sont fusionnés avec celui de MilkyWan.
+- Les guides compressés (`.xml.gz`) sont décompressés dans le Web Worker.
+- Flux HLS : les statistiques l'indiquent et l'analyse MPEG-TS, réservée aux flux TS, est désactivée.
+
 ## 2.1.0 — 4 octobre 2026
 
 - **Démarrage automatique** : à l'ouverture de l'app, la dernière chaîne regardée démarre dans la fenêtre, à côté de la liste. Même chose au retour dans l'app. Avec le lancement anticipé de la TV, rien n'est lu tant que l'app n'est pas à l'écran.

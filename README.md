@@ -24,6 +24,7 @@ Application Tizen Web pour regarder la télévision MilkyWan (FTTH) sur une TV S
 - **Pistes audio et sous-titres** choisis directement dans le bandeau.
 - **Statistiques avancées** : codec, définition, langue, débit reçu avec un graphe sur 60 s, discontinuités (CC), paquets corrompus (TEI) et pertes de synchro. À droite, le **contenu du flux MPEG-TS** : programme, table PMT et un PID par ligne avec son codec, sa langue et son débit.
 - **Favoris, groupes et recherche.**
+- **Listes personnelles** : ajoutez vos propres listes M3U de chaînes gratuites dans `local/` (non publié), avec leur guide via `url-tvg`. Elles apparaissent dans une section à part.
 - Pensé pour la **télécommande Samsung Smart Remote** (sans touches de couleur) : tout se fait avec les flèches et OK.
 - Version **PC** de dépannage, avec un navigateur et un petit relais Python local.
 

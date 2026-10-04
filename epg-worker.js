@@ -1,13 +1,16 @@
-// Downloads and parses the XMLTV guide off the main thread so the UI never freezes.
+// Downloads and parses an XMLTV guide off the main thread so the UI never freezes.
+// Gzipped guides (.xml.gz, detected by their magic bytes) are inflated with DecompressionStream.
 importScripts('data.js');
 self.onmessage=function(event){
-  var url=event.data.url,xhr=new XMLHttpRequest();
   function fail(message){self.postMessage({error:message});}
-  xhr.open('GET',url,true);xhr.timeout=60000;
-  xhr.onload=function(){
-    if(xhr.status<200||xhr.status>=300)return fail('Serveur HTTP '+xhr.status);
-    try{self.postMessage({epg:self.MilkyData.parseEPGText(xhr.responseText,Date.now())});}catch(e){fail(e.message||String(e));}
-  };
-  xhr.onerror=function(){fail('Accès réseau impossible');};xhr.ontimeout=function(){fail('Le serveur ne répond pas');};
-  xhr.send();
+  fetch(event.data.url).then(function(res){
+    if(!res.ok)throw new Error('Serveur HTTP '+res.status);
+    return res.arrayBuffer();
+  }).then(function(buf){
+    var b=new Uint8Array(buf);
+    if(b[0]===0x1f&&b[1]===0x8b)return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    return new TextDecoder('utf-8').decode(b);
+  }).then(function(xml){
+    self.postMessage({epg:self.MilkyData.parseEPGText(xml,Date.now())});
+  }).catch(function(e){fail(e&&e.message?e.message:'Accès réseau impossible');});
 };

@@ -15,7 +15,9 @@
       }else if(pending&&line.indexOf('#EXTGRP:')===0){pending.group=line.slice(8).trim();}
       else if(line&&line.charAt(0)!=='#'){var url=safeURL(line,base);if(pending&&url){pending.url=url;pending.key=pending.id||url;if(list.some(function(ch){return ch.key===pending.key;}))pending.key=url;pending.number=pending.number||String(list.length+1);list.push(pending);}pending=null;}
     });
-    if(!list.length)throw new Error('Aucune chaîne HTTP exploitable dans la liste.');return list;
+    if(!list.length)throw new Error('Aucune chaîne HTTP exploitable dans la liste.');
+    var head=/^\s*#EXTM3U([^\r\n]*)/m.exec(text.replace(/^\uFEFF/,''));if(head){var h=attrs(head[1]),tvg=h['url-tvg']||h['x-tvg-url'];if(tvg)list.tvgUrl=safeURL(tvg.split(',')[0].trim(),base);}
+    return list;
   }
   function xmlTime(value){var m=/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?\s*(Z|[+-]\d{4})?$/.exec(value||'');if(!m)return NaN;
     var n=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));

@@ -16,7 +16,7 @@
   function networkURL(url){return av&&av.isWeb?av.routeURL(url):url;}
   function text(tag,value,className){var el=document.createElement(tag);el.textContent=value;if(className)el.className=className;return el;}
   function time(ms){return new Date(ms).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
-  function request(url){return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open('GET',networkURL(url),true);xhr.timeout=30000;xhr.onload=function(){if(xhr.status>=200&&xhr.status<300)resolve(xhr.responseText);else reject(new Error('Serveur HTTP '+xhr.status));};xhr.onerror=function(){reject(new Error('Accès réseau impossible'));};xhr.ontimeout=function(){reject(new Error('Le serveur ne répond pas'));};xhr.send();});}
+  function request(url){return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open('GET',networkURL(url),true);xhr.timeout=30000;xhr.onload=function(){if((xhr.status>=200&&xhr.status<300)||(xhr.status===0&&xhr.responseText))resolve(xhr.responseText);else reject(new Error('Serveur HTTP '+xhr.status));};xhr.onerror=function(){reject(new Error('Accès réseau impossible'));};xhr.ontimeout=function(){reject(new Error('Le serveur ne répond pas'));};xhr.send();});}
   function schedule(ch){return ch?D.schedule(ch,epg,Date.now()):[];}
   function isFavorite(ch){return favorites.indexOf(ch.key)!==-1;}
   function progress(p){var track=text('div','','progress'),bar=text('span','');bar.style.width=percent(p,Date.now())+'%';track.appendChild(bar);return track;}
@@ -33,14 +33,31 @@
     var fragment=document.createDocumentFragment();
     function row(ch){var b=text('button','');b.dataset.key=ch.key;b.appendChild(text('span',ch.number,'number'));var logo=text('span','','logo');fillLogo(logo,ch);b.appendChild(logo);var body=text('span','','channel-text');body.appendChild(text('strong',ch.name));var p=schedule(ch)[0],small=text('small',p?p.title:'Programme indisponible');body.appendChild(small);b.appendChild(body);b.insertAdjacentHTML('beforeend',EQ);var fav=isFavorite(ch);b.appendChild(text('span',fav?'★':'☆',fav?'star fav':'star'));(rows[ch.key]=rows[ch.key]||[]).push({button:b,small:small});b.onfocus=function(){select(ch);};b.onclick=function(){start(ch);};fragment.appendChild(b);}
     var favs=favoriteOnly?[]:filtered.filter(isFavorite);if(favs.length){fragment.appendChild(text('h3','Favoris'));favs.forEach(row);}
-    if(filtered.length)fragment.appendChild(text('h3',favoriteOnly?'Favoris':(group||'Toutes les chaînes')));filtered.forEach(row);$('channels').appendChild(fragment);markPlaying();
+    var section=null;filtered.forEach(function(ch){var title=favoriteOnly?'Favoris':(group||ch.section||'Toutes les chaînes');if(title!==section){section=title;fragment.appendChild(text('h3',title));}row(ch);});$('channels').appendChild(fragment);markPlaying();
     if(!filtered.length){$('channels').appendChild(text('p',favoriteOnly?'Aucun favori. Options → Ajouter aux favoris.':'Aucune chaîne trouvée.'));selected=null;}
     else select(filtered.filter(function(ch){return selected&&ch.key===selected.key;})[0]||filtered[0]);
     if(focusKey&&ui==='channels'&&!dialogOpen())focusChannel(focusKey);
   }
   function focusChannel(key){var buttons=$('channels').querySelectorAll('button'),target=buttons[0];for(var i=0;i<buttons.length;i++)if(buttons[i].dataset.key===key)target=buttons[i];if(target){target.focus();target.scrollIntoView({block:'nearest'});}else $('video-hit').focus();}
   function toggleFavorite(){var ch=favoriteTarget();if(!ch)return;var key=ch.key,index=favorites.indexOf(key);if(index<0)favorites.push(key);else favorites.splice(index,1);write('mw.favorites',favorites);render(ui==='channels'?key:null);}
-  function load(){if(av&&av.isWeb&&window.location.protocol==='file:'){status('Sur PC, ouvrez Lancer-PC.command (Mac) ou Lancer-PC.bat (Windows) pour lancer la version web locale.');return;}var token=++loadToken;status('Chargement des chaînes…');request(sources.m3u).then(function(body){if(token!==loadToken)return;channels=D.parseM3U(body,sources.m3u);epg={programmes:{},names:{}};if(playing){var real=channels.filter(function(c){return c.key===playing.key;})[0];if(real){playing=real;selected=real;}}render(document.activeElement.dataset.key);markPlaying();if(!autoStarted){autoStarted=true;setTimeout(autoResume,0);}if(ui==='channels'&&!dialogOpen())focusChannel(selected&&selected.key);var cached=read('mw.epg',null);if(cached&&cached.src===sources.epg&&cached.epg){epg=cached.epg;refreshRows();updateBanner();status('');}else status('Chargement du guide…');var src=sources.epg;return whenSettled().then(function(){return loadEPG(src);}).then(function(result){if(token!==loadToken)return;epg=result;refreshRows();updateBanner();status('');setTimeout(function(){try{localStorage.setItem('mw.epg',JSON.stringify({src:src,time:Date.now(),epg:result}));}catch(e){try{localStorage.removeItem('mw.epg');}catch(ignore){}}},3000);},function(error){if(token!==loadToken)return;if(!cached)status('Guide indisponible : '+error.message+'. Les chaînes restent accessibles.');});}).catch(function(error){if(token===loadToken)status(error.message+'. Vérifiez votre connexion MilkyWan ou les adresses dans les options (bouton rouge).');});}
+  // Personal extra playlists (kept out of the public repo). Each may declare its own guide with url-tvg;
+  // a missing file is simply ignored.
+  var EXTRA_PLAYLISTS=['local/portugal.m3u'];
+  function loadExtras(){return Promise.all(EXTRA_PLAYLISTS.map(function(path){var url=new URL(path,window.location.href).href;return request(url).then(function(body){return D.parseM3U(body,url);}).catch(function(){return null;});}));}
+  function mergeGuides(results){var out={programmes:{},names:{}};results.forEach(function(g){if(!g)return;for(var id in g.programmes)out.programmes[id]=g.programmes[id];for(var n in g.names)if(!(n in out.names))out.names[n]=g.names[n];});return out;}
+  function load(){if(av&&av.isWeb&&window.location.protocol==='file:'){status('Sur PC, ouvrez Lancer-PC.command (Mac) ou Lancer-PC.bat (Windows) pour lancer la version web locale.');return;}var token=++loadToken;status('Chargement des chaînes…');
+    Promise.all([request(sources.m3u),loadExtras()]).then(function(r){if(token!==loadToken)return;
+      var list=D.parseM3U(r[0],sources.m3u),keys={},guides=[sources.epg];list.forEach(function(ch){keys[ch.key]=1;});
+      r[1].forEach(function(extra){if(!extra)return;extra.forEach(function(ch){if(keys[ch.key])ch.key=ch.url;keys[ch.key]=1;ch.number=String(list.length+1);ch.section=ch.group||'Autres chaînes';list.push(ch);});if(extra.tvgUrl)guides.push(extra.tvgUrl);});
+      channels=list;epg={programmes:{},names:{}};
+      if(playing){var real=channels.filter(function(c){return c.key===playing.key;})[0];if(real){playing=real;selected=real;}}render(document.activeElement.dataset.key);markPlaying();if(!autoStarted){autoStarted=true;setTimeout(autoResume,0);}
+      if(ui==='channels'&&!dialogOpen())focusChannel(selected&&selected.key);
+      var src=guides.join(' '),cached=read('mw.epg',null);if(cached&&cached.src===src&&cached.epg){epg=cached.epg;refreshRows();updateBanner();status('');}else status('Chargement du guide…');
+      return whenSettled().then(function(){return Promise.all(guides.map(function(url,i){return loadEPG(url).catch(function(e){if(i===0)throw e;return null;});}));}).then(function(results){if(token!==loadToken)return;var result=mergeGuides(results);
+        epg=result;refreshRows();updateBanner();status('');setTimeout(function(){try{localStorage.setItem('mw.epg',JSON.stringify({src:src,time:Date.now(),epg:result}));}catch(e){try{localStorage.removeItem('mw.epg');}catch(ignore){}}},3000);
+      },function(error){if(token!==loadToken)return;if(!cached)status('Guide indisponible : '+error.message+'. Les chaînes restent accessibles.');});
+    }).catch(function(error){if(token===loadToken)status(error.message+'. Vérifiez votre connexion MilkyWan ou les adresses dans les options.');});
+  }
   // Downloading and parsing the 24 MB guide competes with AVPlay for network and CPU: refresh it only once the
   // stream being opened shows a picture (the cached guide is displayed meanwhile).
   var settleWaiters=[];
@@ -155,7 +172,8 @@
   // the same stream on a second connection and checks every MPEG-TS packet (see ts-monitor.js).
   var tsWorker=null,tsHistory=[],tsTotals=null,tsChannel=null,tsError='',tsStreams=null,tsProgram=null,tsPmt=null;
   function stopTsMonitor(){if(tsWorker){tsWorker.terminate();tsWorker=null;}tsChannel=null;}
-  function startTsMonitor(){stopTsMonitor();if(!playing||!window.Worker)return;tsChannel=playing.key;tsHistory=[];tsTotals={cc:0,tei:0,sync:0,seconds:0};tsError='';tsStreams=null;tsProgram=null;tsPmt=null;drawTsGraph();
+  function isHLS(ch){return /\.m3u8(\?|$)/i.test(ch.url);}
+  function startTsMonitor(){stopTsMonitor();if(!playing||!window.Worker)return;tsChannel=playing.key;tsHistory=[];tsTotals={cc:0,tei:0,sync:0,seconds:0};tsError='';tsStreams=null;tsProgram=null;tsPmt=null;drawTsGraph();if(isHLS(playing)){tsError='flux HLS, analyse MPEG-TS non disponible';return;}
     try{tsWorker=new Worker('ts-monitor.js');}catch(e){tsError='analyse indisponible';return;}
     tsWorker.onmessage=function(event){var s=event.data;if(s.error){tsError=s.error;return;}if(s.streams){tsStreams=s.streams;tsProgram=s.program;tsPmt=s.pmt;return;}tsHistory.push(s);if(tsHistory.length>60)tsHistory.shift();tsTotals.cc+=s.cc;tsTotals.tei+=s.tei;tsTotals.sync+=s.sync;tsTotals.seconds++;drawTsGraph();};
     tsWorker.postMessage({cmd:'start',url:new URL(networkURL(playing.url),window.location.href).href});}
@@ -174,8 +192,8 @@
     fillDl('stats-video',[['Codec',prettyCodec(r['Codec vidéo']||'—')],['Définition',r['Résolution du flux']||'—'],['Lecteur',r['État du lecteur']||'—']]);
     fillDl('stats-audio',[['Codec',prettyCodec(r['Codec audio']||'—')],['Langue',r['Langue audio']||'—'],['Sous-titres',r['Sous-titres']||'—']]);
     var recent=tsHistory.slice(-5),avg=function(get){return recent.length?recent.reduce(function(a,s){return a+(get(s)||0);},0)/recent.length:0;},sum=function(k){return tsHistory.reduce(function(a,s){return a+s[k];},0);};
-    $('stats-rate').textContent=recent.length?mbit(avg(function(s){return s.bytes;})):'Mesure…';
-    fillDl('stats-reception',tsTotals?[['Source','MPEG-TS sur HTTP'],['Discontinuités',String(tsTotals.cc),tsTotals.cc>0],['Paquets corrompus',String(tsTotals.tei),tsTotals.tei>0],['Pertes de synchro',String(tsTotals.sync),tsTotals.sync>0],['Durée d’analyse',tsTotals.seconds+' s']]:[]);
+    $('stats-rate').textContent=recent.length?mbit(avg(function(s){return s.bytes;})):(tsError?'—':'Mesure…');
+    fillDl('stats-reception',tsTotals?[['Source',playing&&isHLS(playing)?'HLS (HTTPS)':'MPEG-TS sur HTTP'],['Discontinuités',String(tsTotals.cc),tsTotals.cc>0],['Paquets corrompus',String(tsTotals.tei),tsTotals.tei>0],['Pertes de synchro',String(tsTotals.sync),tsTotals.sync>0],['Durée d’analyse',tsTotals.seconds+' s']]:[]);
     fillDl('stats-ts',[['Programme',tsProgram?'n° '+tsProgram:'—'],['Table PMT',tsPmt!=null?'0x'+hex4(tsPmt)+' ('+tsPmt+')':'—'],['Erreurs de continuité (60 s)',String(sum('cc')),sum('cc')>0]]);
     var table=$('stats-pids');table.textContent='';(tsStreams||[]).forEach(function(st){var tr=document.createElement('tr'),td=text('td','');tr.appendChild(text('td','0x'+hex4(st.pid)));td.appendChild(text('span','','dot '+(['o','v','a','s'][st.kind]||'o')));td.appendChild(document.createTextNode(st.codec+(st.lang?' · '+st.lang:'')));tr.appendChild(td);var bytes=avg(function(s){return s.pids[st.pid];});tr.appendChild(text('td',bytes?mbit(bytes):'—'));table.appendChild(tr);});
     $('nerds-note').textContent=tsError?'Analyse du flux : '+tsError:'Mesures faites sur une seconde lecture du même flux, active uniquement pendant l’affichage de ce panneau.';}

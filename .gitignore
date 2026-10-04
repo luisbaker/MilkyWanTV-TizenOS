@@ -15,3 +15,6 @@ Thumbs.db
 
 # Local build output
 dist/
+
+# Personal channel lists (not published)
+local/
